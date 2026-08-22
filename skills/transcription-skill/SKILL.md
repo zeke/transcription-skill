@@ -21,7 +21,7 @@ python3 <skill-directory>/scripts/transcribe.py <youtube-url | video-file | audi
 
 Replace `<skill-directory>` with the directory containing this `SKILL.md`.
 
-## What it does
+## What it does, in order
 
 1. If the input is a YouTube URL, downloads it with `yt-dlp` into the
    current directory under a slugified filename (lowercased title + video
@@ -34,16 +34,9 @@ Replace `<skill-directory>` with the directory containing this `SKILL.md`.
 4. Polls until the prediction completes and writes the transcript to
    `<slug>.txt` (or the given output path).
 
-## Why gemini-3.5-flash
-
-This was chosen after benchmarking `openai/whisper` (large-v3) against
-`google/gemini-3-pro`, `gemini-3.1-pro`, `gemini-3-flash`, and
-`gemini-3.5-flash` on Replicate. `gemini-3.5-flash` was the fastest
-(roughly 5x faster than Whisper, 4x faster than `gemini-3.1-pro`) with
-transcript quality on par with or better than the slower models: cleaner
-punctuation and paragraph breaks, natural casing, no dropped or
-hallucinated content. There was no accuracy benefit from the larger "pro"
-or "thinking" models on straightforward narrated speech.
+An audio file input skips straight to step 3. `google/gemini-3.5-flash` is
+hardcoded as the transcription model; see the root `README.md` for how
+that choice was benchmarked against other models.
 
 ## Known gotchas
 
