@@ -1,0 +1,6 @@
+#!/bin/sh
+# script/test: run the test suite. No network, no API tokens, no yt-dlp/ffmpeg required.
+set -e
+cd "$(dirname "$0")/.."
+python3 -m py_compile skills/transcription-skill/scripts/transcribe.py
+python3 -m unittest discover -s test -p "*_test.py" -v

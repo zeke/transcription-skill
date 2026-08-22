@@ -1,0 +1,8 @@
+#!/bin/sh
+# script/setup: check for required tools. The CLI itself has no Python
+# package dependencies, so there's nothing to install.
+set -e
+command -v python3 >/dev/null || { echo "python3 is required" >&2; exit 1; }
+command -v yt-dlp >/dev/null || echo "warning: yt-dlp not found (only needed for YouTube URL input)" >&2
+command -v ffmpeg >/dev/null || echo "warning: ffmpeg not found (only needed for video file input)" >&2
+echo "setup ok"
