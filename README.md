@@ -48,7 +48,7 @@ export REPLICATE_API_TOKEN=...
 python3 skills/transcription-skill/scripts/transcribe.py "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 ```
 
-## Why gemini-3.5-flash
+## Transcription model
 
 The skill hardcodes [`gemini-3.5-flash`](https://replicate.com/google/gemini-3.5-flash)
 as its transcription model. That choice came from benchmarking it against
