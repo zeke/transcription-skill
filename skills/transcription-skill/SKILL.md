@@ -21,6 +21,10 @@ python3 <skill-directory>/scripts/transcribe.py <youtube-url | video-file | audi
 
 Replace `<skill-directory>` with the directory containing this `SKILL.md`.
 
+If the script exits saying `yt-dlp` or `ffmpeg` is missing, offer to install
+it for the user (e.g. `brew install yt-dlp` or `brew install ffmpeg` on
+macOS) before retrying, rather than just reporting the error.
+
 ## What it does, in order
 
 1. If the input is a YouTube URL, downloads it with `yt-dlp` into the

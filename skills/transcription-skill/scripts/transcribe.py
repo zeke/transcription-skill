@@ -26,6 +26,7 @@ import json
 import mimetypes
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -52,6 +53,14 @@ AUDIO_MIME_OVERRIDES = {
     ".flac": "audio/flac",
     ".ogg": "audio/ogg",
 }
+
+
+def require_tool(tool, purpose):
+    if shutil.which(tool) is None:
+        sys.exit(
+            f"'{tool}' is required to {purpose} but wasn't found on PATH. "
+            f"Install it (e.g. `brew install {tool}`) and try again."
+        )
 
 
 def token():
@@ -93,6 +102,7 @@ def slugify(text):
 
 def download_video(url):
     """Download a YouTube video with yt-dlp under a slugified filename."""
+    require_tool("yt-dlp", "download YouTube videos")
     info = subprocess.run(
         ["yt-dlp", "--print", "%(title)s|||%(id)s", "--skip-download", url],
         capture_output=True,
@@ -127,6 +137,7 @@ def download_video(url):
 
 def extract_audio(video_path, audio_path=None):
     """Extract audio from a video via stream copy (no re-encoding)."""
+    require_tool("ffmpeg", "extract audio from video files")
     temp = audio_path is None
     if temp:
         fd, audio_path = tempfile.mkstemp(suffix=".m4a")

@@ -41,6 +41,21 @@ class SlugifyTest(unittest.TestCase):
         self.assertEqual(transcribe.slugify("a---b   c"), "a-b-c")
 
 
+class RequireToolTest(unittest.TestCase):
+    def test_passes_when_tool_present(self):
+        try:
+            transcribe.require_tool("python3", "run tests")
+        except SystemExit:
+            self.fail("require_tool raised SystemExit for a tool that exists")
+
+    def test_exits_with_install_hint_when_missing(self):
+        with self.assertRaises(SystemExit) as ctx:
+            transcribe.require_tool("definitely-not-a-real-tool", "do a thing")
+        message = str(ctx.exception)
+        self.assertIn("definitely-not-a-real-tool", message)
+        self.assertIn("brew install", message)
+
+
 class GuessMimeTest(unittest.TestCase):
     def test_m4a_override(self):
         self.assertEqual(transcribe.guess_mime("audio.m4a"), "audio/mp4")

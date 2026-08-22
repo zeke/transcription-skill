@@ -26,6 +26,12 @@ starts at step 3.
 npx skills add zeke/transcription-skill
 ```
 
+Requirements: Python 3, [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) (for
+YouTube URLs), [`ffmpeg`](https://ffmpeg.org) (for video files), and a
+[`REPLICATE_API_TOKEN`](https://replicate.com/account/api-tokens). If
+`yt-dlp` or `ffmpeg` is missing, the agent will offer to install it (e.g.
+via Homebrew) rather than failing outright.
+
 ## Try it
 
 Once installed, invoke the skill by pasting a prompt like this into your
@@ -41,10 +47,6 @@ Or run the script directly:
 export REPLICATE_API_TOKEN=...
 python3 skills/transcription-skill/scripts/transcribe.py "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 ```
-
-Requirements: Python 3, [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) (for
-YouTube URLs), [`ffmpeg`](https://ffmpeg.org) (for video files), and a
-[`REPLICATE_API_TOKEN`](https://replicate.com/account/api-tokens).
 
 ## Why gemini-3.5-flash
 
