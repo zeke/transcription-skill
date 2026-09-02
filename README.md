@@ -18,22 +18,58 @@ Given a YouTube URL, the skill runs this pipeline end to end:
 4. Write the transcript to a `.txt` file
 
 Given a local video file, it starts at step 2. Given a local audio file, it
-starts at step 3.
+starts at step 3. To transcribe only part of something, see
+[Transcribing part of a video](#transcribing-part-of-a-video).
 
 ## Transcribing part of a video
 
-`--from` and `--to` limit the transcript to a time range, given as `SS`,
-`MM:SS`, or `HH:MM:SS`:
+Most of the time you don't want a whole two-hour podcast transcribed. You
+want the 90 seconds where someone said the interesting thing. Ask your
+agent for a range and it will pass one through:
 
-```sh
-python3 skills/transcription-skill/scripts/transcribe.py "https://www.youtube.com/watch?v=dQw4w9WgXcQ" --from 15:08 --to 16:22
+```text
+Transcribe 15:08 to 16:22 of https://www.youtube.com/watch?v=Ko_-qDCRIAM
 ```
 
-For a YouTube URL, only that range is downloaded, so clipping a minute out
-of a two-hour podcast costs a minute of bandwidth and prediction time
-instead of two hours. Clipped files are named after the range (e.g.
-`<slug>-15m08s-16m22s.m4a`) so they sit next to full-length ones instead of
-replacing them.
+Or use the flags directly:
+
+```sh
+python3 skills/transcription-skill/scripts/transcribe.py "https://www.youtube.com/watch?v=Ko_-qDCRIAM" --from 15:08 --to 16:22
+```
+
+Times can be written as `SS`, `MM:SS`, or `HH:MM:SS`. Either flag works on
+its own: `--from 15:08` runs to the end of the media, `--to 16:22` starts
+from the beginning.
+
+For a YouTube URL the cut happens during the download, via `yt-dlp`'s
+`--download-sections`, so only the range you asked for crosses the network.
+Pulling that 74-second clip out of a 108-minute interview transfers about
+23 MB rather than the whole video, and the transcript comes back in about
+17 seconds because the model only ever sees 74 seconds of audio. Local
+video and audio files are cut the same way with `ffmpeg`, which is why
+`ffmpeg` is needed for ranges even when the input is already audio.
+
+Clips are named after their range, so they sit alongside full-length
+artifacts instead of replacing them:
+
+```
+what-did-jeff-bridges-learn-at-death-s-door-ko-qdcriam-15m08s-16m22s.mp4
+what-did-jeff-bridges-learn-at-death-s-door-ko-qdcriam-15m08s-16m22s.m4a
+what-did-jeff-bridges-learn-at-death-s-door-ko-qdcriam-15m08s-16m22s.txt
+```
+
+Ranges are checked against the media's real duration before anything is
+downloaded or cut. Asking for a range that starts after the media ends
+fails immediately, in about two seconds for a YouTube URL, without writing
+any files. Asking for one that merely runs past the end warns and
+transcribes up to the end.
+
+That check matters more than it sounds. `ffmpeg` seeking past the end of a
+file with `-acodec copy` doesn't fail: it exits 0 and writes the tail of
+the stream with negative timestamps. The clip looks perfectly valid, and
+the model will happily hallucinate a clean, plausible sentence over it. A
+wrong transcript is worse than no transcript, so an impossible range is a
+hard error.
 
 ## Install
 
