@@ -124,6 +124,34 @@ class ParseArgsTest(unittest.TestCase):
             transcribe.parse_args(["video.mp4", "--from", "banana"])
 
 
+class ProbeDurationTest(unittest.TestCase):
+    def test_returns_none_for_unreadable_media(self):
+        self.assertIsNone(transcribe.probe_duration("/nonexistent/file.m4a"))
+
+
+class RangeProblemsTest(unittest.TestCase):
+    def test_range_inside_the_media_is_fine(self):
+        self.assertEqual(transcribe.range_problems(6460, 908, 982), (None, None))
+
+    def test_unknown_duration_is_not_second_guessed(self):
+        self.assertEqual(transcribe.range_problems(None, 908, 982), (None, None))
+
+    def test_start_past_the_end_is_an_error(self):
+        error, warning = transcribe.range_problems(60, 10800, 10830)
+        self.assertIn("3h00m00s", error)
+        self.assertIn("1m00s", error)
+        self.assertIsNone(warning)
+
+    def test_start_exactly_at_the_end_is_an_error(self):
+        error, _ = transcribe.range_problems(60, 60, None)
+        self.assertIsNotNone(error)
+
+    def test_end_past_the_end_only_warns(self):
+        error, warning = transcribe.range_problems(60, 30, 90)
+        self.assertIsNone(error)
+        self.assertIn("1m30s", warning)
+
+
 class GuessMimeTest(unittest.TestCase):
     def test_m4a_override(self):
         self.assertEqual(transcribe.guess_mime("audio.m4a"), "audio/mp4")

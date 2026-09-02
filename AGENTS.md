@@ -25,6 +25,13 @@ from double-trimming: `main()` tracks whether the download already applied
 the range. ffmpeg cuts use `-ss` before `-i` plus `-t`, not `-to`, because
 `-to` would be measured from the seek point.
 
+Ranges are validated against the source duration before any download or
+cut (`range_problems`), from `yt-dlp`'s metadata for URLs and `ffprobe` for
+local files. Don't replace that with an after-the-fact check on the clip:
+ffmpeg seeking past EOF under stream copy emits the tail of the stream with
+negative timestamps rather than failing, so the resulting clip looks
+perfectly valid and transcribes as nonsense.
+
 ## Model choice
 
 The skill hardcodes `google/gemini-3.5-flash` as the transcription model,

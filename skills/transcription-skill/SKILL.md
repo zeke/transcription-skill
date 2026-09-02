@@ -3,9 +3,12 @@ name: transcription-skill
 description: >
   Transcribe a YouTube video or a local video/audio file to text. Use this
   skill whenever asked to transcribe a YouTube URL, get a transcript of a
-  video or audio file, or turn spoken audio into text. Downloads YouTube
-  videos with yt-dlp, extracts audio with ffmpeg, and transcribes with
-  Google's gemini-3.5-flash on Replicate.
+  video or audio file, or turn spoken audio into text. Also use it to
+  transcribe only part of a video or audio file, such as a clip, an excerpt,
+  or a time range like "from 15:08 to 16:22", in which case only that range
+  is downloaded. Downloads YouTube videos with yt-dlp, extracts and trims
+  audio with ffmpeg, and transcribes with Google's gemini-3.5-flash on
+  Replicate.
 compatibility: Requires Python 3, yt-dlp (for YouTube URLs), ffmpeg (for video files and time ranges), and a REPLICATE_API_TOKEN.
 ---
 
@@ -45,6 +48,10 @@ Clipped files carry the range in their names (e.g.
 transcript of the same video. Trimming a local file needs `ffmpeg` even
 when the input is already audio.
 
+A range that starts past the end of the media is rejected before anything
+is downloaded or cut. A range that merely ends past it warns and
+transcribes up to the end.
+
 ## What it does, in order
 
 1. If the input is a YouTube URL, downloads it with `yt-dlp` into the
@@ -65,6 +72,13 @@ hardcoded as the transcription model; see the root `README.md` for how
 that choice was benchmarked against other models.
 
 ## Known gotchas
+
+- **ffmpeg seeking past the end of a file doesn't fail.** With `-ss` beyond
+  the media's duration and `-acodec copy`, ffmpeg exits 0 and writes the
+  tail of the stream with negative timestamps (`time=-02:59:00.00`) instead
+  of an empty file. Gemini then hallucinates a plausible sentence over that
+  garbage. This is why the requested range is checked against the source
+  duration up front rather than by inspecting the resulting clip.
 
 - **YouTube 403s.** `yt-dlp`'s extractor breaks against YouTube frequently.
   If downloads fail with `HTTP Error 403: Forbidden`, run

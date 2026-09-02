@@ -151,13 +151,24 @@ def download_video(url, start=None, end=None):
     """Download a YouTube video with yt-dlp under a slugified filename."""
     require_tool("yt-dlp", "download YouTube videos")
     info = subprocess.run(
-        ["yt-dlp", "--print", "%(title)s|||%(id)s", "--skip-download", url],
+        [
+            "yt-dlp",
+            "--print",
+            "%(title)s|||%(id)s|||%(duration)s",
+            "--skip-download",
+            url,
+        ],
         capture_output=True,
         text=True,
     )
     if info.returncode != 0:
         sys.exit(f"yt-dlp failed to read video info:\n{info.stderr}")
-    title, video_id = info.stdout.strip().split("|||")
+    title, video_id, duration = info.stdout.strip().split("|||")
+    # Validate before downloading, so an impossible range costs nothing.
+    try:
+        check_range(float(duration), start, end)
+    except ValueError:
+        pass  # live streams and some videos report no duration
     slug = slugify(f"{title}-{video_id}")
     dest = f"{slug}{clip_suffix(start, end)}.mp4"
 
@@ -238,6 +249,67 @@ def trim_audio(audio_path, start, end):
     return clip_path
 
 
+def probe_duration(path):
+    """Duration of a media file in seconds, or None if it can't be read.
+
+    ffprobe ships with ffmpeg, but this returns None rather than exiting
+    when it's unavailable, so a missing ffprobe can't block a transcript.
+    """
+    if shutil.which("ffprobe") is None:
+        return None
+    result = subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "default=nokey=1:noprint_wrappers=1",
+            path,
+        ],
+        capture_output=True,
+        text=True,
+    )
+    try:
+        return float(result.stdout.strip())
+    except ValueError:
+        return None
+
+
+def range_problems(duration, start, end):
+    """Check a requested range against a known media duration.
+
+    Returns (error, warning), either of which may be None. A start past the
+    end of the media is fatal: ffmpeg seeking past EOF under stream copy
+    doesn't fail, it emits the tail of the stream with negative timestamps,
+    which transcribes as plausible-looking nonsense.
+    """
+    if duration is None:
+        return None, None
+    label = format_timestamp(duration)
+    if start is not None and start >= duration:
+        return (
+            f"--from {format_timestamp(start)} starts at or after the end of "
+            f"the media, which is only {label} long."
+        ), None
+    if end is not None and end > duration:
+        return None, (
+            f"--to {format_timestamp(end)} is past the end of the media "
+            f"({label}); transcribing up to the end instead."
+        )
+    return None, None
+
+
+def check_range(duration, start, end):
+    """Exit on an impossible range, warn on one that overshoots the end."""
+    error, warning = range_problems(duration, start, end)
+    if error:
+        sys.exit(error)
+    if warning:
+        print(f"warning: {warning}")
+
+
 def guess_mime(path):
     ext = os.path.splitext(path)[1].lower()
     if ext in AUDIO_MIME_OVERRIDES:
@@ -302,6 +374,8 @@ def main():
         # Save the extracted audio alongside the video (e.g. slug.mp4 ->
         # slug.m4a) rather than a throwaway temp file, since it's a useful
         # artifact on its own.
+        if not trimmed:
+            check_range(probe_duration(media_path), start, end)
         suffix = "" if trimmed else clip_suffix(start, end)
         sibling_audio = os.path.splitext(media_path)[0] + suffix + ".m4a"
         print(f"extracting audio from {media_path} -> {sibling_audio}...")
@@ -312,6 +386,7 @@ def main():
             None if trimmed else end,
         )
     elif not trimmed and (start is not None or end is not None):
+        check_range(probe_duration(audio_path), start, end)
         audio_path = trim_audio(audio_path, start, end)
 
     output_path = args.output or os.path.splitext(audio_path)[0] + ".txt"
