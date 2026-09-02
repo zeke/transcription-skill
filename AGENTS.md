@@ -16,6 +16,15 @@ This skill is used by many people with different setups.
 - `yt-dlp` and `ffmpeg` are external requirements, invoked as subprocesses;
   don't add more external tool dependencies without strong reason.
 
+## Time ranges
+
+`--from`/`--to` clip the transcribed range. For YouTube URLs the cut
+happens in `yt-dlp` via `--download-sections` so the clip is all that gets
+transferred; for local files it happens in `ffmpeg`. Keep those two paths
+from double-trimming: `main()` tracks whether the download already applied
+the range. ffmpeg cuts use `-ss` before `-i` plus `-t`, not `-to`, because
+`-to` would be measured from the seek point.
+
 ## Model choice
 
 The skill hardcodes `google/gemini-3.5-flash` as the transcription model,
@@ -31,8 +40,9 @@ time rather than hardcoding a version id.
 ## Tests
 
 Run `script/test`, which does a syntax/import check of `transcribe.py`
-(`python3 -m py_compile`) plus argument-parsing unit tests. Tests must not
-require network access, `REPLICATE_API_TOKEN`, `yt-dlp`, or `ffmpeg`.
+(`python3 -m py_compile`) plus argument-parsing, timestamp, and clip-naming
+unit tests. Tests must not require network access, `REPLICATE_API_TOKEN`,
+`yt-dlp`, or `ffmpeg`.
 
 ## Keeping this file current
 

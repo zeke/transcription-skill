@@ -20,6 +20,21 @@ Given a YouTube URL, the skill runs this pipeline end to end:
 Given a local video file, it starts at step 2. Given a local audio file, it
 starts at step 3.
 
+## Transcribing part of a video
+
+`--from` and `--to` limit the transcript to a time range, given as `SS`,
+`MM:SS`, or `HH:MM:SS`:
+
+```sh
+python3 skills/transcription-skill/scripts/transcribe.py "https://www.youtube.com/watch?v=dQw4w9WgXcQ" --from 15:08 --to 16:22
+```
+
+For a YouTube URL, only that range is downloaded, so clipping a minute out
+of a two-hour podcast costs a minute of bandwidth and prediction time
+instead of two hours. Clipped files are named after the range (e.g.
+`<slug>-15m08s-16m22s.m4a`) so they sit next to full-length ones instead of
+replacing them.
+
 ## Install
 
 ```sh
@@ -27,7 +42,8 @@ npx skills add zeke/transcription-skill
 ```
 
 Requirements: Python 3, [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) (for
-YouTube URLs), [`ffmpeg`](https://ffmpeg.org) (for video files), and a
+YouTube URLs), [`ffmpeg`](https://ffmpeg.org) (for video files and time
+ranges), and a
 [`REPLICATE_API_TOKEN`](https://replicate.com/account/api-tokens). If
 `yt-dlp` or `ffmpeg` is missing, the agent will offer to install it (e.g.
 via Homebrew) rather than failing outright.

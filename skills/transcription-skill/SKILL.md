@@ -6,7 +6,7 @@ description: >
   video or audio file, or turn spoken audio into text. Downloads YouTube
   videos with yt-dlp, extracts audio with ffmpeg, and transcribes with
   Google's gemini-3.5-flash on Replicate.
-compatibility: Requires Python 3, yt-dlp (for YouTube URLs), ffmpeg (for video files), and a REPLICATE_API_TOKEN.
+compatibility: Requires Python 3, yt-dlp (for YouTube URLs), ffmpeg (for video files and time ranges), and a REPLICATE_API_TOKEN.
 ---
 
 # Transcription skill
@@ -16,7 +16,7 @@ text using Google's `gemini-3.5-flash` on Replicate.
 
 ```sh
 export REPLICATE_API_TOKEN=...
-python3 <skill-directory>/scripts/transcribe.py <youtube-url | video-file | audio-file> [output-file]
+python3 <skill-directory>/scripts/transcribe.py <youtube-url | video-file | audio-file> [output-file] [--from TIME] [--to TIME]
 ```
 
 Replace `<skill-directory>` with the directory containing this `SKILL.md`.
@@ -25,14 +25,36 @@ If the script exits saying `yt-dlp` or `ffmpeg` is missing, offer to install
 it for the user (e.g. `brew install yt-dlp` or `brew install ffmpeg` on
 macOS) before retrying, rather than just reporting the error.
 
+## Transcribing part of a video
+
+When the user names a time range, pass it through with `--from` and `--to`
+rather than transcribing the whole thing. Times can be `SS`, `MM:SS`, or
+`HH:MM:SS`, and either flag can be used alone.
+
+```sh
+python3 <skill-directory>/scripts/transcribe.py "https://youtu.be/abc123" --from 15:08 --to 16:22
+```
+
+For a YouTube URL this passes `--download-sections` to `yt-dlp`, so only
+the requested range crosses the network. On a 108-minute podcast, pulling
+a 74-second clip moves about 23 MB instead of the full download, and the
+prediction sees 74 seconds of audio instead of an hour and a half.
+
+Clipped files carry the range in their names (e.g.
+`<slug>-15m08s-16m22s.m4a`), so clips never overwrite a full-length
+transcript of the same video. Trimming a local file needs `ffmpeg` even
+when the input is already audio.
+
 ## What it does, in order
 
 1. If the input is a YouTube URL, downloads it with `yt-dlp` into the
    current directory under a slugified filename (lowercased title + video
-   id, e.g. `my-video-title-abc123.mp4`).
+   id, e.g. `my-video-title-abc123.mp4`), fetching only the `--from`/`--to`
+   range if one was given.
 2. If the input is a video file (or was just downloaded), extracts its
    audio with `ffmpeg` via stream copy (no re-encoding) and saves it
-   alongside the video as `<slug>.m4a`.
+   alongside the video as `<slug>.m4a`. A local audio input with a time
+   range is trimmed the same way.
 3. Base64-encodes the audio and sends it to `google/gemini-3.5-flash` on
    Replicate with a verbatim-transcription prompt.
 4. Polls until the prediction completes and writes the transcript to

@@ -56,6 +56,74 @@ class RequireToolTest(unittest.TestCase):
         self.assertIn("brew install", message)
 
 
+class ParseTimestampTest(unittest.TestCase):
+    def test_accepted_formats(self):
+        self.assertEqual(transcribe.parse_timestamp("90"), 90)
+        self.assertEqual(transcribe.parse_timestamp("15:08"), 908)
+        self.assertEqual(transcribe.parse_timestamp("1:02:03"), 3723)
+        self.assertEqual(transcribe.parse_timestamp(" 0:01.5 "), 1.5)
+
+    def test_rejects_garbage(self):
+        for value in ("abc", "1:2:3:4", "", "12:", "-5"):
+            with self.assertRaises(ValueError):
+                transcribe.parse_timestamp(value)
+
+
+class ClipSuffixTest(unittest.TestCase):
+    def test_empty_without_a_range(self):
+        self.assertEqual(transcribe.clip_suffix(None, None), "")
+
+    def test_start_and_end(self):
+        self.assertEqual(transcribe.clip_suffix(908, 982), "-15m08s-16m22s")
+
+    def test_open_ended_range(self):
+        self.assertEqual(transcribe.clip_suffix(908, None), "-15m08s-end")
+
+    def test_start_defaults_to_zero(self):
+        self.assertEqual(transcribe.clip_suffix(None, 982), "-0m00s-16m22s")
+
+    def test_includes_hours_past_an_hour(self):
+        self.assertEqual(transcribe.clip_suffix(3723, 3800), "-1h02m03s-1h03m20s")
+
+
+class TrimArgsTest(unittest.TestCase):
+    def test_expresses_the_range_as_a_duration(self):
+        self.assertEqual(
+            transcribe.trim_args(908, 982), (["-ss", "908"], ["-t", "74"])
+        )
+
+    def test_open_start_and_open_end(self):
+        self.assertEqual(transcribe.trim_args(None, 982), ([], ["-t", "982"]))
+        self.assertEqual(transcribe.trim_args(908, None), (["-ss", "908"], []))
+
+    def test_no_flags_without_a_range(self):
+        self.assertEqual(transcribe.trim_args(None, None), ([], []))
+
+
+class ParseArgsTest(unittest.TestCase):
+    def test_source_only(self):
+        args = transcribe.parse_args(["video.mp4"])
+        self.assertEqual(args.source, "video.mp4")
+        self.assertIsNone(args.output)
+        self.assertIsNone(args.start)
+        self.assertIsNone(args.end)
+
+    def test_output_and_range(self):
+        args = transcribe.parse_args(
+            ["video.mp4", "out.txt", "--from", "15:08", "--to", "16:22"]
+        )
+        self.assertEqual(args.output, "out.txt")
+        self.assertEqual((args.start, args.end), (908, 982))
+
+    def test_rejects_backwards_range(self):
+        with self.assertRaises(SystemExit):
+            transcribe.parse_args(["video.mp4", "--from", "2:00", "--to", "1:00"])
+
+    def test_rejects_invalid_timestamp(self):
+        with self.assertRaises(SystemExit):
+            transcribe.parse_args(["video.mp4", "--from", "banana"])
+
+
 class GuessMimeTest(unittest.TestCase):
     def test_m4a_override(self):
         self.assertEqual(transcribe.guess_mime("audio.m4a"), "audio/mp4")
