@@ -126,6 +126,10 @@ narrated speech. See
 for the gotchas found while building this (Gemini's inability to fetch
 Replicate's own file URLs, `.m4a` mimetype sniffing, etc.).
 
+## More Skills
+
+Browse more skills at [zeke/skills](https://github.com/zeke/skills).
+
 ## License
 
 MIT
