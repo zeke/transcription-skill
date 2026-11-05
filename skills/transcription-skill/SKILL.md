@@ -95,3 +95,19 @@ that choice was benchmarked against other models.
 - **Pin to the model's current `latest_version`.** Don't hardcode a
   version id — Google ships new Gemini versions on Replicate often enough
   that hardcoded ids go stale.
+- **Gemini on Replicate sometimes fails every request with `ModelError ...
+  (E001)`.** If a short clip of known-good audio fails the same way, the
+  model is down; it's not your file. If whisper.cpp is installed
+  (`brew install whisper-cpp`) and a large-v3-turbo model is available
+  (`ggml-large-v3-turbo.bin`), fall back to it:
+
+  ```sh
+  ffmpeg -i input.m4a -ar 16000 -ac 1 input.wav
+  whisper-cli -m path/to/ggml-large-v3-turbo.bin \
+    -f input.wav -otxt -of output -nt -np -mc 0
+  ```
+
+  Always pass `-mc 0` (no context carried between segments). Without it, a
+  7.5-minute recording got stuck repeating one sentence and lost its
+  ending. Expect proper nouns to come out wrong ("CloudCode" for Claude
+  Code), so fix them by hand.
